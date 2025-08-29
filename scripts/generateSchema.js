@@ -9,7 +9,7 @@ import { buildSchema } from "../src/schema/merge.js"
 
 async function generateSchema() {
   const { typeDefs, resolvers } = await buildSchema()
-
+  console.log("✅ buildSchema!", typeDefs, resolvers)
   try {
     console.log("🔄 Generating GraphQL schema...")
 

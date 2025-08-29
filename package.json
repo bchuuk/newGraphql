@@ -50,6 +50,7 @@
     "fb": "^2.0.0",
     "file-system-cache": "^2.4.7",
     "firebase-admin": "^13.5.0",
+    "globby": "^14.1.0",
     "google-auth-library": "^10.3.0",
     "graphql": "^16.11.0",
     "graphql-middleware": "^6.1.35",

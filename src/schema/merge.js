@@ -1,21 +1,34 @@
+// src/schema/merge.js
 import { loadFiles } from "@graphql-tools/load-files"
 import { mergeTypeDefs, mergeResolvers } from "@graphql-tools/merge"
+import { globby } from "globby"
 import path from "path"
-import { pathToFileURL } from "url"
 
 export async function buildSchema() {
-  // resolvers
-  const resolversArray = await loadFiles(
-    pathToFileURL(path.join(process.cwd(), "src/resolvers/**/index.js")).href,
-    { extensions: ["js"], import: true }
+  // Use globby to find files
+  const typeDefsFiles = await globby("src/resolvers/**/typeDefs.js")
+  const resolversFiles = await globby("src/resolvers/**/index.js")
+
+  const typeDefsArray = await Promise.all(
+    typeDefsFiles.map(async (file) => {
+      const normalizedPath = new URL(
+        `file://${path.resolve(file).replace(/\\/g, "/")}`
+      ).href
+      return (await import(normalizedPath)).default
+    })
   )
 
-  // typeDefs
-  const typeDefsArray = await loadFiles(
-    pathToFileURL(path.join(process.cwd(), "src/resolvers/**/typeDefs.js"))
-      .href,
-    { extensions: ["js"], import: true }
+  const resolversArray = await Promise.all(
+    resolversFiles.map(async (file) => {
+      const normalizedPath = new URL(
+        `file://${path.resolve(file).replace(/\\/g, "/")}`
+      ).href
+      return (await import(normalizedPath)).default
+    })
   )
+
+  console.log("typeDefsArray:", typeDefsArray)
+  console.log("resolversArray:", resolversArray)
 
   const typeDefs = mergeTypeDefs(typeDefsArray)
   const resolvers = mergeResolvers(resolversArray)
