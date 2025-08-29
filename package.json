@@ -1,30 +1,39 @@
 {
   "name": "apollo-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "GraphQL Apollo Server with Prisma",
+  "type": "module",
   "main": "src/main.js",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "start": "node src/main.js",
     "dev": "cross-env NODE_ENV=development nodemon src/main.js",
-    "imgsrv": "cross-env NODE_PATH=src/ node data/imgsrv.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "node scripts/seed.js",
+    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "db:studio": "prisma studio",
     "generate:schema": "node scripts/generateSchema.js",
     "generate:introspect": "npx prisma db pull",
     "generate:prisma": "npx prisma generate",
-    "db": "pnpm generate:introspect && pnpm generate:prisma"
+    "db": "pnpm generate:introspect && pnpm generate:prisma",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
-  "keywords": [],
+  "keywords": [
+    "graphql",
+    "apollo",
+    "prisma",
+    "nodejs"
+  ],
   "author": "ZeroOne LLC",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@apollo/datasource-rest": "^6.4.1",
     "@apollo/server": "^5.0.0",
+    "@graphql-tools/load-files": "^7.0.1",
     "@graphql-tools/merge": "^9.0.4",
     "@graphql-tools/schema": "^10.0.25",
     "@prisma/client": "^6.15.0",
@@ -62,13 +71,15 @@
   },
   "devDependencies": {
     "@types/graphql-upload": "^17.0.0",
+    "jest": "^29.7.0",
     "nodemon": "^3.1.10",
     "prisma": "^6.15.0"
   },
   "nodemonConfig": {
     "ignore": [
       "*.log",
-      "logs/*"
+      "logs/*",
+      "node_modules/*"
     ],
     "env": {
       "NODE_ENV": "development"

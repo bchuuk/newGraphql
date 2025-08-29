@@ -1,10 +1,272 @@
-// prisma/schema.prisma
 generator client {
-provider = "prisma-client-js"
-binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
-provider = "postgresql"
-url = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  username             String               @unique
+  displayName          String?
+  avatar               String?
+  bio                  String?
+  password             String?
+  role                 UserRole             @default(USER)
+  status               UserStatus           @default(ACTIVE)
+  emailVerified        Boolean              @default(false)
+  lastActive           DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  googleId             String?              @unique
+  appleId              String?              @unique
+  blockedAt            DateTime?
+  blockedReason        String?
+  blockedUntil         DateTime?
+  blockedBy            String?
+  commentLikes         CommentLike[]
+  comments             Comment[]
+  followers            Follow[]             @relation("UserFollows")
+  following            Follow[]             @relation("UserFollowing")
+  likes                Like[]
+  notificationSettings NotificationSetting?
+  sentNotifications    Notification[]       @relation("NotificationFromUser")
+  notifications        Notification[]       @relation("NotificationUser")
+  passwordResets       PasswordReset[]
+  posts                Post[]
+  pushTokens           PushToken[]
+  reportedBy           Report[]             @relation("ReportReported")
+  reports              Report[]             @relation("ReportReporter")
+  systemLogs           SystemLog[]
+
+  @@map("users")
+}
+
+model Post {
+  id            String         @id @default(cuid())
+  title         String?
+  content       String
+  images        String[]       @default([])
+  status        PostStatus     @default(PUBLISHED)
+  visibility    PostVisibility @default(PUBLIC)
+  publishedAt   DateTime?
+  deletedAt     DateTime?
+  deletedBy     String?
+  deletedReason String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  authorId      String
+  comments      Comment[]
+  likes         Like[]
+  notifications Notification[]
+  author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reports       Report[]
+
+  @@map("posts")
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  content   String
+  status    CommentStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  authorId  String
+  postId    String
+  likes     CommentLike[]
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("likes")
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@map("comment_likes")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  followerId  String
+  followingId String
+  follower    User     @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  type       NotificationType
+  message    String
+  isRead     Boolean          @default(false)
+  metadata   Json?
+  createdAt  DateTime         @default(now())
+  userId     String
+  fromUserId String?
+  postId     String?
+  fromUser   User?            @relation("NotificationFromUser", fields: [fromUserId], references: [id])
+  post       Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user       User             @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  reason      String
+  description String?
+  status      ReportStatus @default(PENDING)
+  adminNote   String?
+  action      String?
+  resolvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  reporterId  String
+  reportedId  String?
+  postId      String?
+  resolvedBy  String?
+  post        Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reported    User?        @relation("ReportReported", fields: [reportedId], references: [id])
+  reporter    User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+model SystemLog {
+  id           String   @id @default(cuid())
+  type         String
+  action       String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  userId       String?
+  targetUserId String?
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@map("system_logs")
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  token     String
+  platform  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, token])
+  @@map("push_tokens")
+}
+
+model NotificationSetting {
+  id            String  @id @default(cuid())
+  pushEnabled   Boolean @default(true)
+  emailEnabled  Boolean @default(true)
+  newFollower   Boolean @default(true)
+  newPost       Boolean @default(true)
+  postLiked     Boolean @default(true)
+  postCommented Boolean @default(true)
+  mentioned     Boolean @default(true)
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+  GOD
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+  PENDING
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  DELETED
+  REPORTED
+}
+
+enum PostVisibility {
+  PUBLIC
+  PRIVATE
+  FOLLOWERS_ONLY
+}
+
+enum CommentStatus {
+  ACTIVE
+  DELETED
+  REPORTED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+enum NotificationType {
+  NEW_FOLLOWER
+  POST_LIKED
+  POST_COMMENTED
+  NEW_POST
+  MENTIONED
+  ADMIN_MESSAGE
+  POST_DELETED
+  ACCOUNT_WARNING
 }

@@ -1,6 +1,6 @@
 // src/main.js
 import { ApolloServer } from "@apollo/server"
-import { expressMiddleware } from "@apollo/server/express4"
+// import { expressMiddleware } from "@apollo/server/express4"
 import express from "express"
 import http from "http"
 import cors from "cors"
@@ -12,15 +12,16 @@ import fileUpload from "express-fileupload"
 import dotenv from "dotenv"
 
 // Import resolvers and schema
-import { typeDefs } from "./schema/typeDefs.js"
-import resolvers from "./resolvers/index.js"
 import { getUser } from "./middleware/auth.js"
 import { prisma } from "./lib/prisma.js"
+import { buildSchema } from "./schema/merge.js"
 
 // Load environment variables
 dotenv.config()
 
 async function startServer() {
+  const { typeDefs, resolvers } = await buildSchema()
+
   try {
     console.log("🚀 Starting GraphQL server...")
 

@@ -5,10 +5,11 @@ import fs from "fs"
 import path from "path"
 
 // Import resolvers болон typeDefs
-import resolvers from "../src/resolvers/index.js"
-import { typeDefs } from "../src/schema/typeDefs.js"
+import { buildSchema } from "../src/schema/merge.js"
 
 async function generateSchema() {
+  const { typeDefs, resolvers } = await buildSchema()
+
   try {
     console.log("🔄 Generating GraphQL schema...")
 
