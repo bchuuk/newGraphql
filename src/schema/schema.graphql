@@ -1,0 +1,424 @@
+scalar DateTime
+
+scalar Upload
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+  GOD
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+type User {
+  id: ID!
+  email: String!
+  username: String!
+  displayName: String
+  avatar: String
+  bio: String
+  role: UserRole!
+  status: UserStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  lastActive: DateTime
+  postCount: Int!
+  followerCount: Int!
+  followingCount: Int!
+  posts: [Post!]!
+  followers: [Follow!]!
+  following: [Follow!]!
+}
+
+type Post {
+  id: ID!
+  title: String
+  content: String!
+  images: [String!]
+  status: PostStatus!
+  visibility: PostVisibility!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  author: User!
+  comments: [Comment!]!
+  likes: [Like!]!
+  likeCount: Int!
+  commentCount: Int!
+  isLiked: Boolean!
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  DELETED
+}
+
+enum PostVisibility {
+  PUBLIC
+  PRIVATE
+  FOLLOWERS_ONLY
+}
+
+type Comment {
+  id: ID!
+  content: String!
+  status: CommentStatus!
+  createdAt: DateTime!
+  author: User!
+  post: Post!
+  likes: [CommentLike!]!
+  likeCount: Int!
+  isLiked: Boolean!
+}
+
+enum CommentStatus {
+  ACTIVE
+  DELETED
+  REPORTED
+}
+
+type Query {
+  me: User
+  userProfile(username: String!): User
+  searchUsers(query: String!, page: Int, limit: Int): [User!]!
+  myNotifications(page: Int, limit: Int): NotificationConnection!
+  unreadNotificationCount: Int!
+  notificationSettings: NotificationSetting!
+  feed(page: Int, limit: Int): [Post!]!
+  explorePosts(page: Int, limit: Int): [Post!]!
+  post(id: ID!): Post
+  searchPosts(query: String!, page: Int, limit: Int): [Post!]!
+  adminStats: AdminStats
+  adminUsers(page: Int, limit: Int, search: String): UserConnection
+  adminReports(status: ReportStatus): [Report!]!
+  adminLogs(type: String, page: Int, limit: Int): [SystemLog!]!
+  godSystemInfo: SystemInfo
+  godAdmins: [User!]!
+  godDatabaseStats: DatabaseStats
+  godPerformanceMetrics: PerformanceMetrics
+}
+
+type Mutation {
+  login(email: String!, password: String!): AuthPayload!
+  register(input: RegisterInput!): AuthPayload!
+  appleSignIn(idToken: String!): AuthPayload!
+  googleSignIn(idToken: String!): AuthPayload!
+  logout: MutationResponse!
+  forgotPassword(email: String!): MutationResponse!
+  resetPassword(token: String!, newPassword: String!): MutationResponse!
+  updateProfile(input: UpdateProfileInput!): UserMutationResponse!
+  changePassword(currentPassword: String!, newPassword: String!): MutationResponse!
+  followUser(userId: ID!): MutationResponse!
+  unfollowUser(userId: ID!): MutationResponse!
+  markNotificationAsRead(notificationId: ID!): MutationResponse!
+  markAllNotificationsAsRead: MutationResponse!
+  createPost(input: CreatePostInput!): PostMutationResponse!
+  updatePost(id: ID!, input: UpdatePostInput!): PostMutationResponse!
+  deletePost(id: ID!): MutationResponse!
+  likePost(postId: ID!): LikeMutationResponse!
+  commentOnPost(postId: ID!, content: String!): CommentMutationResponse!
+  reportPost(postId: ID!, reason: String!, description: String): MutationResponse!
+  adminBlockUser(userId: ID!, reason: String!, duration: Int): UserMutationResponse!
+  adminDeletePost(postId: ID!, reason: String!): MutationResponse!
+  adminResolveReport(reportId: ID!, action: String!, note: String): ReportMutationResponse!
+  godCreateAdmin(email: String!, username: String!, password: String!, role: UserRole): UserMutationResponse!
+  godUpdateAdminRole(adminId: ID!, newRole: UserRole!): UserMutationResponse!
+  godSetMaintenanceMode(enabled: Boolean!, message: String): MutationResponse!
+  godOptimizeDatabase: DatabaseOptimizationResponse!
+  registerPushToken(token: String!, platform: String!): MutationResponse!
+  updateNotificationSettings(input: NotificationSettingsInput!): NotificationSettingsMutationResponse!
+  sendPushNotification(userIds: [ID!]!, title: String!, body: String!, data: JSON): PushNotificationResponse!
+  testPushNotification: PushNotificationResponse!
+}
+
+type Subscription {
+  newNotification: Notification
+  newPostFromFollowing: Post
+  newComment(postId: ID!): Comment
+  postLiked(postId: ID!): PostLikeEvent
+  newReport: Report
+  userStatusChanged: UserStatusChangeEvent
+  systemAlert: SystemAlert
+  systemActivity: SystemActivity
+  adminActivity: AdminActivity
+  criticalAlert: CriticalAlert
+  pushNotificationStatus: PushNotificationStatusEvent
+}
+
+input RegisterInput {
+  email: String!
+  username: String!
+  password: String!
+  displayName: String
+}
+
+input UpdateProfileInput {
+  displayName: String
+  bio: String
+  avatar: String
+}
+
+input CreatePostInput {
+  title: String
+  content: String!
+  images: [String!]
+  visibility: PostVisibility = PUBLIC
+}
+
+input UpdatePostInput {
+  title: String
+  content: String
+  images: [String!]
+  visibility: PostVisibility
+}
+
+input NotificationSettingsInput {
+  pushEnabled: Boolean
+  emailEnabled: Boolean
+  newFollower: Boolean
+  newPost: Boolean
+  postLiked: Boolean
+  postCommented: Boolean
+  mentioned: Boolean
+}
+
+type MutationResponse {
+  success: Boolean!
+  message: String!
+}
+
+type AuthPayload {
+  success: Boolean!
+  message: String!
+  token: String
+  user: User
+}
+
+type UserMutationResponse {
+  success: Boolean!
+  message: String!
+  user: User
+}
+
+type PostMutationResponse {
+  success: Boolean!
+  message: String!
+  post: Post
+}
+
+type CommentMutationResponse {
+  success: Boolean!
+  message: String!
+  comment: Comment
+}
+
+type LikeMutationResponse {
+  success: Boolean!
+  message: String!
+  isLiked: Boolean!
+}
+
+type ReportMutationResponse {
+  success: Boolean!
+  message: String!
+  report: Report
+}
+
+type NotificationSettingsMutationResponse {
+  success: Boolean!
+  message: String!
+  settings: NotificationSetting
+}
+
+type PushNotificationResponse {
+  success: Boolean!
+  message: String!
+  sentCount: Int
+}
+
+type DatabaseOptimizationResponse {
+  success: Boolean!
+  message: String!
+  stats: OptimizationStats
+}
+
+type UserConnection {
+  users: [User!]!
+  pagination: Pagination!
+}
+
+type NotificationConnection {
+  notifications: [Notification!]!
+  pagination: Pagination!
+}
+
+type Pagination {
+  page: Int!
+  limit: Int!
+  total: Int!
+  hasMore: Boolean!
+}
+
+type AdminStats {
+  userCount: Int!
+  postCount: Int!
+  activeUsers: Int!
+  timestamp: DateTime!
+}
+
+type Report {
+  id: ID!
+  reason: String!
+  description: String
+  status: ReportStatus!
+  createdAt: DateTime!
+  resolvedAt: DateTime
+  adminNote: String
+  reporter: User!
+  reported: User
+  post: Post
+  resolvedBy: User
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+type SystemLog {
+  id: ID!
+  type: String!
+  action: String!
+  metadata: JSON
+  createdAt: DateTime!
+  user: User
+  targetUser: User
+}
+
+type SystemInfo {
+  userCount: Int!
+  adminCount: Int!
+  postCount: Int!
+  reportCount: Int!
+  systemHealth: String!
+  timestamp: DateTime!
+}
+
+type DatabaseStats {
+  tableStats: [JSON!]!
+  timestamp: DateTime!
+}
+
+type PerformanceMetrics {
+  memoryUsage: JSON!
+  uptime: Float!
+  nodeVersion: String!
+  timestamp: DateTime!
+}
+
+type OptimizationStats {
+  deletedLogs: Int!
+  deletedPosts: Int!
+}
+
+type Notification {
+  id: ID!
+  type: String!
+  message: String!
+  isRead: Boolean!
+  metadata: JSON
+  createdAt: DateTime!
+  user: User!
+  fromUser: User
+  post: Post
+}
+
+type NotificationSetting {
+  id: ID!
+  pushEnabled: Boolean!
+  emailEnabled: Boolean!
+  newFollower: Boolean!
+  newPost: Boolean!
+  postLiked: Boolean!
+  postCommented: Boolean!
+  mentioned: Boolean!
+  user: User!
+}
+
+type PostLikeEvent {
+  postId: ID!
+  userId: ID!
+  isLiked: Boolean!
+  timestamp: DateTime!
+}
+
+type UserStatusChangeEvent {
+  userId: ID!
+  status: UserStatus!
+  reason: String
+  timestamp: DateTime!
+}
+
+type SystemAlert {
+  type: String!
+  message: String!
+  severity: String!
+  timestamp: DateTime!
+}
+
+type SystemActivity {
+  type: String!
+  description: String!
+  userId: ID
+  timestamp: DateTime!
+}
+
+type AdminActivity {
+  adminId: ID!
+  action: String!
+  targetId: ID
+  timestamp: DateTime!
+}
+
+type CriticalAlert {
+  title: String!
+  message: String!
+  urgency: String!
+  timestamp: DateTime!
+}
+
+type PushNotificationStatusEvent {
+  userId: ID!
+  status: String!
+  message: String
+  timestamp: DateTime!
+}
+
+type Like {
+  id: ID!
+  createdAt: DateTime!
+  user: User!
+  post: Post!
+}
+
+type CommentLike {
+  id: ID!
+  createdAt: DateTime!
+  user: User!
+  comment: Comment!
+}
+
+type Follow {
+  id: ID!
+  createdAt: DateTime!
+  follower: User!
+  following: User!
+}
+
+scalar JSON
