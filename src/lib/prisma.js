@@ -3,5 +3,10 @@ import pkg from "@prisma/client"
 const { PrismaClient } = pkg
 
 export const prisma = new PrismaClient({
-  log: ["query", "info", "warn", "error"],
+  log: [
+    // "query", // log all queries
+    "info", // info
+    "warn", // warn
+    "error", // error
+  ],
 })
