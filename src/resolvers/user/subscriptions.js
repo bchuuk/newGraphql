@@ -10,7 +10,7 @@ const userSubscriptions = {
   newNotification: {
     subscribe: requireAuth(
       withFilter(
-        () => pubsub.asyncIterator(["NEW_NOTIFICATION"]),
+        () => pubsub.asyncIterableIterator(["NEW_NOTIFICATION"]),
         (payload, variables, context) => {
           return payload.newNotification.userId === context.user.id
         }
@@ -22,7 +22,7 @@ const userSubscriptions = {
   newPostFromFollowing: {
     subscribe: requireAuth(
       withFilter(
-        () => pubsub.asyncIterator(["NEW_POST"]),
+        () => pubsub.asyncIterableIterator(["NEW_POST"]),
         async (payload, variables, context) => {
           const { user } = context
           const { post } = payload.newPostFromFollowing

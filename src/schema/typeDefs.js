@@ -453,7 +453,7 @@ export const typeDefs = gql`
     # Admin subscriptions
     newReport: Report!
     userStatusChanged: JSON!
-    adminActivity: JSON!
+    adminActivity(type: String!, message: String, createdAt: DateTime): JSON!
 
     # System subscriptions
     systemAlert: JSON!

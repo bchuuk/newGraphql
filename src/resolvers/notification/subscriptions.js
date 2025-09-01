@@ -10,7 +10,7 @@ const notificationSubscriptions = {
   pushNotificationStatus: {
     subscribe: requireAuth(
       withFilter(
-        () => pubsub.asyncIterator(["PUSH_STATUS"]),
+        () => pubsub.asyncIterableIterator(["PUSH_STATUS"]),
         (payload, variables, context) => {
           return payload.pushNotificationStatus.userId === context.user.id
         }

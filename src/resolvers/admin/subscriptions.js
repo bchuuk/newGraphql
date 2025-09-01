@@ -11,7 +11,7 @@ const adminSubscriptions = {
     subscribe: requireRole(
       ["ADMIN"],
       withFilter(
-        () => pubsub.asyncIterator(["NEW_REPORT"]),
+        () => pubsub.asyncIterableIterator(["NEW_REPORT"]),
         (payload, variables, context) => {
           return true // Бүх admin-д илгээх
         }
@@ -24,7 +24,7 @@ const adminSubscriptions = {
     subscribe: requireRole(
       ["ADMIN"],
       withFilter(
-        () => pubsub.asyncIterator(["USER_STATUS_CHANGED"]),
+        () => pubsub.asyncIterableIterator(["USER_STATUS_CHANGED"]),
         (payload, variables, context) => {
           return true
         }
@@ -37,7 +37,7 @@ const adminSubscriptions = {
     subscribe: requireRole(
       ["ADMIN"],
       withFilter(
-        () => pubsub.asyncIterator(["SYSTEM_ALERT"]),
+        () => pubsub.asyncIterableIterator(["SYSTEM_ALERT"]),
         (payload, variables, context) => {
           return true
         }

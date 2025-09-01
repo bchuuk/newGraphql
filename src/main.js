@@ -21,6 +21,10 @@ import resolvers from "./resolvers/index.js"
 import { getUser } from "./middleware/auth.js"
 import { prisma } from "./lib/prisma.js"
 
+import { PubSub } from "graphql-subscriptions"
+
+const pubsub = new PubSub()
+
 // Load environment variables
 dotenv.config()
 
@@ -144,6 +148,7 @@ async function startServer() {
           return {
             user,
             prisma,
+            pubsub,
             req,
             res,
           }

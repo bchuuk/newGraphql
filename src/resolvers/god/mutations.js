@@ -21,7 +21,12 @@ const godMutations = {
       })
 
       if (existingUser) {
-        throw new Error("User with this email or username already exists")
+        return {
+          success: false,
+          message: "User with this email or username already exists",
+          user: existingUser,
+        }
+        // throw new Error("User with this email or username already exists")
       }
 
       const hashedPassword = await bcrypt.hash(password, 10)

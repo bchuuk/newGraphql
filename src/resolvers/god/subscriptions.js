@@ -11,7 +11,7 @@ const godSubscriptions = {
     subscribe: requireRole(
       ["GOD"],
       withFilter(
-        () => pubsub.asyncIterator(["SYSTEM_ACTIVITY"]),
+        () => pubsub.asyncIterableIterator(["SYSTEM_ACTIVITY"]),
         (payload, variables, context) => {
           return true // GOD бүгдийг хардаг
         }
@@ -24,9 +24,11 @@ const godSubscriptions = {
     subscribe: requireRole(
       ["GOD"],
       withFilter(
-        () => pubsub.asyncIterator(["ADMIN_ACTIVITY"]),
+        () => pubsub.asyncIterableIterator(["ADMIN_ACTIVITY"]),
         (payload, variables, context) => {
-          return true
+          return {
+            adminId: payload.adminActivity.adminId,
+          }
         }
       )
     ),
@@ -37,7 +39,7 @@ const godSubscriptions = {
     subscribe: requireRole(
       ["GOD"],
       withFilter(
-        () => pubsub.asyncIterator(["CRITICAL_ALERT"]),
+        () => pubsub.asyncIterableIterator(["CRITICAL_ALERT"]),
         (payload, variables, context) => {
           return true
         }
