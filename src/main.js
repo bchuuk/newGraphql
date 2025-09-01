@@ -1,23 +1,25 @@
-// src/main.js - FIXED VERSION
+// src/main.js - WITH @as-integrations/express5
 import { ApolloServer } from "@apollo/server"
-import { expressMiddleware } from "@apollo/server/express4"
+import { expressMiddleware } from "@as-integrations/express5"
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer"
 import { makeExecutableSchema } from "@graphql-tools/schema"
 import express from "express"
 import http from "http"
 import cors from "cors"
+
+import { useServer } from "graphql-ws/use/ws"
 import { WebSocketServer } from "ws"
-import { useServer } from "graphql-ws/lib/use/ws"
+
 import cookieParser from "cookie-parser"
 import fileUpload from "express-fileupload"
 import dotenv from "dotenv"
+import fs from "fs"
 
 // Import resolvers and schema
 import { typeDefs } from "./schema/typeDefs.js"
 import resolvers from "./resolvers/index.js"
 import { getUser } from "./middleware/auth.js"
 import { prisma } from "./lib/prisma.js"
-import fs from "fs"
 
 // Load environment variables
 dotenv.config()
@@ -129,11 +131,11 @@ async function startServer() {
       })
     })
 
-    // GraphQL endpoint
+    // GraphQL endpoint using express middleware
     app.use(
       "/graphql",
       expressMiddleware(server, {
-        context: async ({ req }) => {
+        context: async ({ req, res }) => {
           // Get user from request
           const user = await getUser(req)
 
@@ -142,6 +144,7 @@ async function startServer() {
             user,
             prisma,
             req,
+            res,
           }
         },
       })
@@ -171,7 +174,6 @@ async function startServer() {
           const filepath = `uploads/${filename}`
 
           // Create uploads directory if it doesn't exist
-
           if (!fs.existsSync("public")) {
             fs.mkdirSync("public")
           }
@@ -238,7 +240,10 @@ async function startServer() {
         await server.stop()
         await serverCleanup.dispose()
         await prisma.$disconnect()
-        process.exit(0)
+        httpServer.close(() => {
+          console.log("✅ Server closed")
+          process.exit(0)
+        })
       } catch (error) {
         console.error("Error during shutdown:", error)
         process.exit(1)

@@ -2,10 +2,9 @@
   "name": "apollo-server",
   "version": "1.0.0",
   "description": "GraphQL Apollo Server with Prisma",
-  "type": "module",
   "main": "src/main.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   },
   "scripts": {
     "start": "node src/main.js",
@@ -18,9 +17,7 @@
     "generate:schema": "node scripts/generateSchema.js",
     "generate:introspect": "npx prisma db pull",
     "generate:prisma": "npx prisma generate",
-    "db": "pnpm generate:introspect && pnpm generate:prisma",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "db": "pnpm generate:introspect && pnpm generate:prisma"
   },
   "keywords": [
     "graphql",
@@ -30,10 +27,11 @@
   ],
   "author": "ZeroOne LLC",
   "license": "ISC",
+  "type": "module",
   "dependencies": {
     "@apollo/datasource-rest": "^6.4.1",
     "@apollo/server": "^5.0.0",
-    "@graphql-tools/load-files": "^7.0.1",
+    "@as-integrations/express5": "^1.0.0",
     "@graphql-tools/merge": "^9.0.4",
     "@graphql-tools/schema": "^10.0.25",
     "@prisma/client": "^6.15.0",
@@ -50,7 +48,6 @@
     "fb": "^2.0.0",
     "file-system-cache": "^2.4.7",
     "firebase-admin": "^13.5.0",
-    "globby": "^14.1.0",
     "google-auth-library": "^10.3.0",
     "graphql": "^16.11.0",
     "graphql-middleware": "^6.1.35",
