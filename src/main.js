@@ -95,12 +95,13 @@ async function startServer() {
     console.log("✅ Apollo Server started")
 
     // Middleware setup
+    const allowedOrigins = process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(",").map((url) => url.trim())
+      : ["http://localhost:3000", "http://localhost:3001"]
+
     app.use(
       cors({
-        origin: process.env.FRONTEND_URL?.split(",") || [
-          "http://localhost:3000",
-          "http://localhost:3001",
-        ],
+        origin: allowedOrigins,
         credentials: true,
       })
     )
@@ -204,7 +205,7 @@ async function startServer() {
     app.use("/uploads", express.static("public/uploads"))
 
     // 404 handler
-    app.use("*", (req, res) => {
+    app.use((req, res, next) => {
       res.status(404).json({
         error: "Route not found",
         availableEndpoints: ["/graphql", "/health", "/upload"],

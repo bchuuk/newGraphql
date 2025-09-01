@@ -1,4 +1,4 @@
-// src/schema/typeDefs.js - SIMPLIFIED & WORKING VERSION
+// src/schema/typeDefs.js - CORRECTED VERSION
 import { gql } from "graphql-tag"
 
 export const typeDefs = gql`
@@ -103,6 +103,7 @@ export const typeDefs = gql`
     post: Post!
     likeCount: Int!
     isLiked: Boolean
+    _count: CommentCount!
   }
 
   type Notification {
@@ -115,6 +116,18 @@ export const typeDefs = gql`
     user: User!
     fromUser: User
     post: Post
+  }
+
+  type NotificationPagination {
+    notifications: [Notification!]!
+    pagination: Pagination!
+  }
+
+  type Pagination {
+    page: Int!
+    limit: Int!
+    total: Int!
+    hasMore: Boolean!
   }
 
   type Report {
@@ -195,6 +208,14 @@ export const typeDefs = gql`
     comment: Comment
   }
 
+  # User Types
+  type UsergodDatabaseStats {
+    userCount: Int!
+    postCount: Int!
+    activeUsers: Int!
+    timestamp: DateTime!
+  }
+
   # Admin Types
   type AdminStats {
     userCount: Int!
@@ -203,34 +224,125 @@ export const typeDefs = gql`
     reportCount: Int!
     timestamp: DateTime!
   }
+  type AdminLog {
+    id: ID!
+    type: String!
+    message: String!
+    createdAt: DateTime!
+    user: User
+  }
+
+  # God Types
+  type TableStat {
+    schemaname: String
+    tablename: String
+    attname: String
+    n_distinct: Float
+    correlation: Float
+  }
+
+  type GodDatabaseStats {
+    tableStats: [TableStat!]!
+    timestamp: DateTime!
+  }
+
+  type GodPerformanceMetrics {
+    memoryUsage: JSON!
+    uptime: Float!
+    nodeVersion: String!
+    timestamp: DateTime!
+  }
+
+  # Notification Types
+  type NotificationSetting {
+    id: ID!
+    userId: ID!
+    pushEnabled: Boolean!
+    emailEnabled: Boolean!
+    newFollower: Boolean!
+    newPost: Boolean!
+    postLiked: Boolean!
+    postCommented: Boolean!
+    mentioned: Boolean!
+  }
+
+  type UserCount {
+    posts: Int!
+    followers: Int!
+    following: Int!
+  }
+
+  type PostCount {
+    likes: Int!
+    comments: Int!
+  }
+
+  type Like {
+    id: ID!
+    userId: ID!
+    postId: ID!
+  }
+
+  type CommentCount {
+    likes: Int!
+  }
+
+  type NotificationConnection {
+    notifications: [Notification!]!
+    pagination: Pagination!
+  }
+
+  type AdminUserConnection {
+    users: [User!]!
+    pagination: Pagination!
+  }
+
+  type SystemLog {
+    id: ID!
+    type: String!
+    message: String!
+    createdAt: String!
+    user: User
+  }
+
+  type GodSystemInfo {
+    userCount: Int!
+    adminCount: Int!
+    postCount: Int!
+    reportCount: Int!
+    systemHealth: String!
+    timestamp: String!
+  }
 
   # Root Types
   type Query {
-    # Basic queries
-    me: User
+    # User
+    me: User!
+    userProfile(username: String!): User!
+    myNotifications(page: Int, limit: Int): NotificationConnection!
+    searchUsers(query: String!, page: Int, limit: Int): [User!]!
 
-    # User queries
-    user(id: ID, username: String): User
-    searchUsers(query: String!): [User!]!
-
-    # Post queries
-    post(id: ID!): Post
+    # Post
     feed(page: Int, limit: Int): [Post!]!
     explorePosts(page: Int, limit: Int): [Post!]!
-    searchPosts(query: String!): [Post!]!
+    post(id: ID!): Post!
+    searchPosts(query: String!, page: Int, limit: Int): [Post!]!
 
-    # Notification queries
-    myNotifications(page: Int, limit: Int): [Notification!]!
+    # Notification
+    notificationSettings: NotificationSetting!
     unreadNotificationCount: Int!
 
-    # Admin queries
-    adminStats: AdminStats
-    adminUsers(page: Int, limit: Int, search: String): [User!]!
-    adminReports(status: ReportStatus): [Report!]!
+    # Admin
+    adminStats: AdminStats!
+    adminUsers(page: Int, limit: Int, search: String): AdminUserConnection!
+    adminReports(status: String): [Report!]!
+    adminLogs(type: String, page: Int, limit: Int): [SystemLog!]!
 
-    # God queries
-    godSystemInfo: JSON
+    # God
+    godSystemInfo: GodSystemInfo!
     godAdmins: [User!]!
+    godDatabaseStats: GodDatabaseStats!
+    godPerformanceMetrics: GodPerformanceMetrics!
   }
 
   type Mutation {
@@ -277,6 +389,23 @@ export const typeDefs = gql`
     # Notifications
     markNotificationAsRead(notificationId: ID!): MutationResponse!
     markAllNotificationsAsRead: MutationResponse!
+    registerPushToken(token: String!, platform: String!): MutationResponse!
+    updateNotificationSettings(
+      pushEnabled: Boolean!
+      emailEnabled: Boolean!
+      newFollower: Boolean!
+      newPost: Boolean!
+      postLiked: Boolean!
+      postCommented: Boolean!
+      mentioned: Boolean!
+    ): MutationResponse!
+    sendPushNotification(
+      userIds: [ID!]!
+      title: String!
+      body: String!
+      data: JSON
+    ): MutationResponse!
+    testPushNotification: MutationResponse!
 
     # Admin mutations
     adminBlockUser(
@@ -293,30 +422,43 @@ export const typeDefs = gql`
     ): MutationResponse!
 
     # God mutations
+    godUpdateAdminRole(adminId: ID!, newRole: UserRole!): UserMutationResponse!
+    godOptimizeDatabase: MutationResponse!
     godCreateAdmin(
       email: String!
       username: String!
       password: String!
-      role: UserRole
     ): UserMutationResponse!
-    godUpdateAdminRole(adminId: ID!, newRole: UserRole!): UserMutationResponse!
+    godDeleteUser(userId: ID!): MutationResponse!
+    godUpdateUserRole(userId: ID!, role: UserRole!): UserMutationResponse!
     godSetMaintenanceMode(enabled: Boolean!, message: String): MutationResponse!
-    godOptimizeDatabase: MutationResponse!
+
+    # Admin
+    adminUpdates: JSON!
+
+    # God
+    godSystemMonitoring: JSON!
   }
 
   type Subscription {
     # User subscriptions
     newNotification(userId: ID!): Notification!
+    pushNotificationStatus: JSON!
 
     # Post subscriptions
     newComment(postId: ID!): Comment!
     postLiked(postId: ID!): JSON!
+    newPostFromFollowing(userId: ID!): Post!
 
     # Admin subscriptions
     newReport: Report!
     userStatusChanged: JSON!
+    adminActivity: JSON!
 
     # System subscriptions
     systemAlert: JSON!
+    systemActivity: JSON!
+
+    criticalAlert: JSON!
   }
 `
