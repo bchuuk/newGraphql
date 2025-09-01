@@ -1,4 +1,4 @@
-// src/resolvers/post/postMutations.js
+// src/resolvers/post/mutations.js
 import { prisma } from "../../lib/prisma.js"
 import { requireAuth } from "../../middleware/auth.js"
 import { PubSub } from "graphql-subscriptions"
@@ -15,6 +15,7 @@ const postMutations = {
         ...input,
         authorId: user.id,
         status: "PUBLISHED",
+        publishedAt: new Date(),
       },
       include: {
         author: true,
@@ -34,21 +35,23 @@ const postMutations = {
     })
 
     // Send notifications to followers
-    const notifications = followers.map((follow) => ({
-      type: "NEW_POST",
-      userId: follow.followerId,
-      fromUserId: user.id,
-      postId: post.id,
-      message: `${user.username} shared a new post`,
-    }))
+    if (followers.length > 0) {
+      const notifications = followers.map((follow) => ({
+        type: "NEW_POST",
+        userId: follow.followerId,
+        fromUserId: user.id,
+        postId: post.id,
+        message: `${user.displayName || user.username} shared a new post`,
+      }))
 
-    await prisma.notification.createMany({
-      data: notifications,
-    })
+      await prisma.notification.createMany({
+        data: notifications,
+      })
+    }
 
     // Publish to subscription
     pubsub.publish("NEW_POST", {
-      newPostFromFollowing: { post },
+      newPostFromFollowing: post,
     })
 
     return {
@@ -163,14 +166,14 @@ const postMutations = {
       })
 
       // Create notification if not own post
-      if (post.authorId !== user.id) {
+      if (post && post.authorId !== user.id) {
         await prisma.notification.create({
           data: {
             type: "POST_LIKED",
             userId: post.authorId,
             fromUserId: user.id,
             postId: postId,
-            message: `${user.username} liked your post`,
+            message: `${user.displayName || user.username} liked your post`,
           },
         })
 
@@ -220,14 +223,16 @@ const postMutations = {
     })
 
     // Create notification if not own post
-    if (post.authorId !== user.id) {
+    if (post && post.authorId !== user.id) {
       await prisma.notification.create({
         data: {
           type: "POST_COMMENTED",
           userId: post.authorId,
           fromUserId: user.id,
           postId: postId,
-          message: `${user.username} commented on your post`,
+          message: `${
+            user.displayName || user.username
+          } commented on your post`,
         },
       })
     }

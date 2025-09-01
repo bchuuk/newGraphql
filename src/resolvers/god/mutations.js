@@ -2,6 +2,7 @@
 import { prisma } from "../../lib/prisma.js"
 import { requireRole } from "../../middleware/auth.js"
 import { PubSub } from "graphql-subscriptions"
+import bcrypt from "bcryptjs"
 
 const pubsub = new PubSub()
 
@@ -32,7 +33,7 @@ const godMutations = {
           password: hashedPassword,
           role,
           status: "ACTIVE",
-          createdBy: god.id,
+          emailVerified: true,
         },
       })
 
@@ -50,7 +51,7 @@ const godMutations = {
       return {
         success: true,
         message: "Admin created successfully",
-        admin: newAdmin,
+        user: newAdmin,
       }
     }
   ),
@@ -79,7 +80,7 @@ const godMutations = {
       return {
         success: true,
         message: "Admin role updated successfully",
-        admin,
+        user: admin,
       }
     }
   ),

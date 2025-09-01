@@ -1,27 +1,28 @@
-// src/main.js
+// src/main.js - FIXED VERSION
 import { ApolloServer } from "@apollo/server"
-// import { expressMiddleware } from "@apollo/server/express4"
+import { expressMiddleware } from "@apollo/server/express4"
+import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer"
+import { makeExecutableSchema } from "@graphql-tools/schema"
 import express from "express"
 import http from "http"
 import cors from "cors"
-import { makeExecutableSchema } from "@graphql-tools/schema"
 import { WebSocketServer } from "ws"
-import { useServer } from "graphql-ws/use/ws"
+import { useServer } from "graphql-ws/lib/use/ws"
 import cookieParser from "cookie-parser"
 import fileUpload from "express-fileupload"
 import dotenv from "dotenv"
 
 // Import resolvers and schema
+import { typeDefs } from "./schema/typeDefs.js"
+import resolvers from "./resolvers/index.js"
 import { getUser } from "./middleware/auth.js"
 import { prisma } from "./lib/prisma.js"
-import { buildSchema } from "./schema/merge.js"
+import fs from "fs"
 
 // Load environment variables
 dotenv.config()
 
 async function startServer() {
-  const { typeDefs, resolvers } = await buildSchema()
-
   try {
     console.log("🚀 Starting GraphQL server...")
 
@@ -69,12 +70,12 @@ async function startServer() {
       wsServer
     )
 
-    // Apollo Server setup - SIMPLIFIED VERSION
+    // Apollo Server setup
     const server = new ApolloServer({
       schema,
-      introspection: true, // Enable for development
+      introspection: process.env.NODE_ENV !== "production",
       plugins: [
-        // Graceful shutdown
+        ApolloServerPluginDrainHttpServer({ httpServer }),
         {
           async serverWillStart() {
             return {
@@ -128,66 +129,23 @@ async function startServer() {
       })
     })
 
-    // GraphQL endpoint using express middleware
-    app.use("/graphql", async (req, res) => {
-      try {
-        // Get user from request
-        const user = await getUser(req)
+    // GraphQL endpoint
+    app.use(
+      "/graphql",
+      expressMiddleware(server, {
+        context: async ({ req }) => {
+          // Get user from request
+          const user = await getUser(req)
 
-        // Create context
-        const context = {
-          user,
-          prisma,
-          req,
-          res,
-        }
-
-        // Handle GraphQL request manually
-        const { query, variables, operationName } =
-          req.method === "GET"
-            ? {
-                query: req.query.query,
-                variables: req.query.variables,
-                operationName: req.query.operationName,
-              }
-            : req.body
-
-        if (!query) {
-          return res.status(400).json({ error: "No query provided" })
-        }
-
-        // Execute GraphQL
-        const result = await server.executeOperation(
-          {
-            query,
-            variables: variables
-              ? typeof variables === "string"
-                ? JSON.parse(variables)
-                : variables
-              : {},
-            operationName,
-          },
-          {
-            contextValue: context,
+          // Create context
+          return {
+            user,
+            prisma,
+            req,
           }
-        )
-
-        // Send response
-        if (result.body.kind === "single") {
-          res.json(result.body.singleResult)
-        } else {
-          res
-            .status(400)
-            .json({ error: "Subscription not supported over HTTP" })
-        }
-      } catch (error) {
-        console.error("GraphQL execution error:", error)
-        res.status(500).json({
-          error: "Internal server error",
-          message: error.message,
-        })
-      }
-    })
+        },
+      })
+    )
 
     // File upload endpoint
     app.post("/upload", async (req, res) => {
@@ -212,6 +170,15 @@ async function startServer() {
           const filename = `${Date.now()}_${file.name}`
           const filepath = `uploads/${filename}`
 
+          // Create uploads directory if it doesn't exist
+
+          if (!fs.existsSync("public")) {
+            fs.mkdirSync("public")
+          }
+          if (!fs.existsSync("public/uploads")) {
+            fs.mkdirSync("public/uploads")
+          }
+
           await file.mv(`public/${filepath}`)
           uploadedFiles.push({
             filename,
@@ -230,6 +197,9 @@ async function startServer() {
         res.status(500).json({ error: "Upload failed" })
       }
     })
+
+    // Serve static files
+    app.use("/uploads", express.static("public/uploads"))
 
     // 404 handler
     app.use("*", (req, res) => {
@@ -262,21 +232,21 @@ async function startServer() {
     })
 
     // Graceful shutdown
-    process.on("SIGTERM", async () => {
-      console.log("🛑 SIGTERM received, shutting down gracefully")
-      await server.stop()
-      await serverCleanup.dispose()
-      await prisma.$disconnect()
-      process.exit(0)
-    })
+    const gracefulShutdown = async (signal) => {
+      console.log(`🛑 ${signal} received, shutting down gracefully`)
+      try {
+        await server.stop()
+        await serverCleanup.dispose()
+        await prisma.$disconnect()
+        process.exit(0)
+      } catch (error) {
+        console.error("Error during shutdown:", error)
+        process.exit(1)
+      }
+    }
 
-    process.on("SIGINT", async () => {
-      console.log("🛑 SIGINT received, shutting down gracefully")
-      await server.stop()
-      await serverCleanup.dispose()
-      await prisma.$disconnect()
-      process.exit(0)
-    })
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"))
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"))
   } catch (error) {
     console.error("❌ Error starting server:", error)
     process.exit(1)
@@ -290,12 +260,18 @@ async function testDatabaseConnection() {
     console.log("✅ Database connected successfully")
 
     // Test query
-    const userCount = await prisma.user.count()
+    const userCount = await prisma.user.count().catch(() => 0)
     console.log(`📊 Database stats: ${userCount} users`)
   } catch (error) {
     console.error("❌ Database connection failed:", error)
     console.error("Please check your DATABASE_URL in .env file")
-    process.exit(1)
+
+    // Continue without database for development
+    if (process.env.NODE_ENV === "development") {
+      console.log("⚠️  Continuing without database connection...")
+    } else {
+      process.exit(1)
+    }
   }
 }
 

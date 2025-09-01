@@ -8,7 +8,7 @@ const pubsub = new PubSub()
 const adminMutations = {
   // Хэрэглэгч block хийх
   adminBlockUser: requireRole(
-    ["ADMIN"],
+    ["ADMIN", "SUPER_ADMIN", "GOD"],
     async (parent, { userId, reason, duration }, context) => {
       const { user: admin } = context
 
@@ -56,7 +56,7 @@ const adminMutations = {
 
   // Пост устгах
   adminDeletePost: requireRole(
-    ["ADMIN"],
+    ["ADMIN", "SUPER_ADMIN", "GOD"],
     async (parent, { postId, reason }, context) => {
       const { user: admin } = context
 
@@ -98,7 +98,7 @@ const adminMutations = {
 
   // Тайлан шийдвэрлэх
   adminResolveReport: requireRole(
-    ["ADMIN"],
+    ["ADMIN", "SUPER_ADMIN", "GOD"],
     async (parent, { reportId, action, note }, context) => {
       const { user: admin } = context
 
@@ -118,7 +118,7 @@ const adminMutations = {
       })
 
       // Хэрэв action нь BLOCK бол хэрэглэгчийг block хийх
-      if (action === "BLOCK_USER") {
+      if (action === "BLOCK_USER" && report.reportedId) {
         await prisma.user.update({
           where: { id: report.reportedId },
           data: {
@@ -134,6 +134,41 @@ const adminMutations = {
         success: true,
         message: "Report resolved successfully",
         report,
+      }
+    }
+  ),
+
+  // Хэрэглэгч unblock хийх
+  adminUnblockUser: requireRole(
+    ["ADMIN", "SUPER_ADMIN", "GOD"],
+    async (parent, { userId }, context) => {
+      const { user: admin } = context
+
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          status: "ACTIVE",
+          blockedAt: null,
+          blockedReason: null,
+          blockedBy: null,
+          blockedUntil: null,
+        },
+      })
+
+      // Log
+      await prisma.systemLog.create({
+        data: {
+          type: "USER_UNBLOCKED",
+          action: `User ${user.username} unblocked by admin`,
+          userId: admin.id,
+          targetUserId: userId,
+        },
+      })
+
+      return {
+        success: true,
+        message: "User successfully unblocked",
+        user,
       }
     }
   ),

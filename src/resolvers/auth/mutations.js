@@ -7,7 +7,9 @@ import { verifyGoogleToken } from "../../lib/googleAuth.js"
 
 const authMutations = {
   // Email/Password login
-  login: async (parent, { email, password }, context) => {
+  login: async (parent, { input }, context) => {
+    const { email, password } = input
+
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     })
