@@ -61,6 +61,3 @@ async function generateSchema() {
 
 // Run generator
 generateSchema()
-
-// package.json-д нэмэх script
-// "generate:schema": "node scripts/generateSchema.js"
